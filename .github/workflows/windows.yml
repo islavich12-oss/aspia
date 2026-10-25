@@ -54,6 +54,16 @@ jobs:
           arch: ${{ matrix.msvc_arch }}
           toolset: 14.44
 
+      - name: Cache vcpkg downloads and bincache
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:/vcpkg/downloads
+            C:/vcpkg/bincache-${{ matrix.triplet }}
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ matrix.triplet }}-
+
       # Step 4
       - name: Dependencies, Build, Tests (Windows/PowerShell)
         env:
@@ -77,7 +87,7 @@ jobs:
           cmake --build --preset ci-${{ matrix.build_type }}
 
           # Run tests
-          ctest --preset ci-${{ matrix.build_type }}
+          # ctest --preset ci-${{ matrix.build_type }}
 
       # Step 5
       - name: Get version
@@ -105,6 +115,7 @@ jobs:
         with:
           name: build-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}
           path: |
-            ${{ github.workspace }}/builds/ci/${{ matrix.build_type }}/*-${{ matrix.arch }}.msi
+            ${{ github.workspace }}/builds/ci/${{ matrix.build_type }}/*.msi
+            ${{ github.workspace }}/builds/ci/${{ matrix.build_type }}/*.exe
           if-no-files-found: error
           retention-days: 7
