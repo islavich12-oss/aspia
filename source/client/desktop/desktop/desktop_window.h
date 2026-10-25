@@ -139,6 +139,7 @@ private slots:
     void onResizeTimer();
     void onScrollTimer();
     void onPasteKeystrokes();
+    void onExecuteCommand(const QString& command, const QString& mode);
     void onShowHidePanel();
 
 private:
