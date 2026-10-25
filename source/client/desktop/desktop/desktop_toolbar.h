@@ -95,6 +95,7 @@ public:
 
 signals:
     void sig_pasteAsKeystrokes();
+    void sig_executeCommand(const QString& command, const QString& mode);
     void sig_keyCombination(QKeyCombination key_secuence);
     void sig_switchToFullscreen(bool fullscreen);
     void sig_switchToAutosize();
@@ -136,6 +137,9 @@ private slots:
 
 private:
     void createAdditionalMenu();
+    void setupRestoCommandsMenu();
+    void loadRestoCommands();
+    void onExecuteCustomCommand();
     void showFullScreenButtons(bool show);
     void updateScaleMenu();
     void updateSize();
@@ -151,6 +155,7 @@ private:
 
     ScopedQPointer<QMenu> power_menu_;
     ScopedQPointer<QMenu> tools_menu_;
+    ScopedQPointer<QMenu> resto_menu_;
     QMenu* additional_menu_ = nullptr;
 
     QList<QAction*> screen_actions_;
