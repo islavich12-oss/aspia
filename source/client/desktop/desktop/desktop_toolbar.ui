@@ -68,6 +68,7 @@
      <addaction name="action_tools"/>
      <addaction name="action_cad"/>
      <addaction name="action_paste_clipboard_as_keystrokes"/>
+     <addaction name="action_resto_commands"/>
      <addaction name="separator"/>
      <addaction name="action_autosize"/>
      <addaction name="action_fullscreen"/>
@@ -400,6 +401,18 @@
    </property>
    <property name="visible">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="action_resto_commands">
+   <property name="icon">
+    <iconset resource="../../../common/resources/common.qrc">
+     <normaloff>:/img/terminal.svg</normaloff>:/img/terminal.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Fast Commands (commands.json)</string>
+   </property>
+   <property name="toolTip">
+    <string>Fast Commands (commands.json)</string>
    </property>
   </action>
   <action name="action_paste_clipboard_as_keystrokes">
