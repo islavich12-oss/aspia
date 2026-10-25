@@ -204,6 +204,7 @@ DesktopWindow::DesktopWindow(const proto::control::Config& desktop_config, QWidg
 
     connect(toolbar_, &DesktopToolBar::sig_startStatistics, this, &DesktopWindow::onMetricsRequest);
     connect(toolbar_, &DesktopToolBar::sig_pasteAsKeystrokes, this, &DesktopWindow::onPasteKeystrokes);
+    connect(toolbar_, &DesktopToolBar::sig_executeCommand, this, &DesktopWindow::onExecuteCommand);
     connect(toolbar_, &DesktopToolBar::sig_switchToFullscreen, this, &DesktopWindow::sig_fullscreenRequested);
     connect(toolbar_, &DesktopToolBar::sig_actionsChanged, this, &DesktopWindow::sig_actionsChanged);
 
@@ -1264,6 +1265,25 @@ void DesktopWindow::onScrollTimer()
         pos = std::min(pos, scrollbar->maximum());
 
         scrollbar->setSliderPosition(pos);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+void DesktopWindow::onExecuteCommand(const QString& command, const QString& mode)
+{
+    LOG(INFO) << "Execute command:" << command << "mode:" << mode;
+
+    if (mode == "direct")
+    {
+        sendText(command + "\n");
+    }
+    else
+    {
+        desktop_->executeKeyCombination(QKeyCombination(Qt::Key_R, Qt::KeyboardModifier::MetaModifier));
+
+        QTimer::singleShot(400, this, [this, command]() {
+            sendText(command + "\n");
+        });
     }
 }
 
