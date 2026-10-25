@@ -22,13 +22,13 @@ env:
 jobs:
   build-all-matrix:
     name: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-2022
     if: github.event_name == 'push'
     strategy:
       fail-fast: true
       matrix:
         os: [win11]
-        arch: [x86, x64]
+        arch: [x64]
         build_type: [release]
         include:
           - os: win11
