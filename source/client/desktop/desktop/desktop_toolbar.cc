@@ -27,6 +27,13 @@
 #include <QMenu>
 #include <QTimer>
 #include <QToolButton>
+#include <QCoreApplication>
+#include <QFile>
+#include <QInputDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLineEdit>
 
 #include "base/auto_qpointer.h"
 #include "base/gui_application.h"
@@ -644,6 +651,7 @@ QList<QPair<Tab::ActionRole, QList<QAction*>>> DesktopToolBar::tabActionGroups()
     actions.append(ui->action_tools);
     actions.append(ui->action_cad);
     actions.append(ui->action_paste_clipboard_as_keystrokes);
+    actions.append(ui->action_resto_commands);
 
     groups.append({ Tab::ActionRole::ACTION, actions});
     groups.append({ Tab::ActionRole::VIEW,
@@ -1088,6 +1096,8 @@ void DesktopToolBar::createAdditionalMenu()
     {
         startRecording(!is_recording_started_);
     });
+
+    setupRestoCommandsMenu();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1182,4 +1192,115 @@ QString DesktopToolBar::formatSessionText(int index, const QString& user_name, b
         text.append("*");
 
     return text;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+void DesktopToolBar::setupRestoCommandsMenu()
+{
+    resto_menu_.reset(new QMenu(this));
+    ui->action_resto_commands->setMenu(resto_menu_.get());
+
+    QToolButton* btn = qobject_cast<QToolButton*>(
+        ui->toolbar->widgetForAction(ui->action_resto_commands));
+    if (btn)
+        btn->setPopupMode(QToolButton::InstantPopup);
+
+    connect(resto_menu_.get(), &QMenu::aboutToShow, this, [this]() {
+        onMenuShow();
+        loadRestoCommands();
+    });
+    connect(resto_menu_.get(), &QMenu::aboutToHide, this, &DesktopToolBar::onMenuHide);
+
+    loadRestoCommands();
+}
+
+//--------------------------------------------------------------------------------------------------
+void DesktopToolBar::loadRestoCommands()
+{
+    if (!resto_menu_)
+        return;
+
+    resto_menu_->clear();
+
+    QString config_path = QCoreApplication::applicationDirPath() + "/commands.json";
+    QFile file(config_path);
+
+    if (!file.exists())
+    {
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            QJsonArray arr;
+            auto add_def = [&arr](const QString& title, const QString& cmd, const QString& mode) {
+                QJsonObject obj;
+                obj["title"] = title;
+                obj["cmd"] = cmd;
+                obj["mode"] = mode;
+                arr.append(obj);
+            };
+            add_def("Restart iikoFront Service", "net stop iikoFrontService && net start iikoFrontService", "win_r");
+            add_def("Kill iikoFront Process", "taskkill /f /im iikoFront.exe", "win_r");
+            add_def("Start iikoFront App", "start \"\" \"C:\\Program Files\\iiko\\iikoFront\\iikoFront.exe\"", "win_r");
+            add_def("Restart Print Spooler", "net stop spooler && net start spooler", "win_r");
+            add_def("Flush DNS & ARP", "ipconfig /flushdns && arp -d *", "win_r");
+            add_def("Restart Explorer Shell", "taskkill /f /im explorer.exe && start explorer.exe", "win_r");
+
+            QJsonDocument doc(arr);
+            file.write(doc.toJson(QJsonDocument::Indented));
+            file.close();
+        }
+    }
+
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QByteArray data = file.readAll();
+        file.close();
+
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (doc.isArray())
+        {
+            QJsonArray arr = doc.array();
+            for (const QJsonValue& val : arr)
+            {
+                if (val.isObject())
+                {
+                    QJsonObject obj = val.toObject();
+                    QString title = obj["title"].toString();
+                    QString cmd = obj["cmd"].toString();
+                    QString mode = obj["mode"].toString();
+                    if (mode.isEmpty())
+                        mode = "win_r";
+
+                    if (!title.isEmpty() && !cmd.isEmpty())
+                    {
+                        QAction* act = resto_menu_->addAction(title);
+                        connect(act, &QAction::triggered, this, [this, cmd, mode]() {
+                            emit sig_executeCommand(cmd, mode);
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    resto_menu_->addSeparator();
+    QAction* custom_act = resto_menu_->addAction(tr("Run Custom Command..."));
+    connect(custom_act, &QAction::triggered, this, &DesktopToolBar::onExecuteCustomCommand);
+
+    resto_menu_->addSeparator();
+    QAction* reload_act = resto_menu_->addAction(tr("Reload commands.json"));
+    connect(reload_act, &QAction::triggered, this, &DesktopToolBar::loadRestoCommands);
+}
+
+//--------------------------------------------------------------------------------------------------
+void DesktopToolBar::onExecuteCustomCommand()
+{
+    bool ok = false;
+    QString cmd = QInputDialog::getText(this, tr("Run Command"),
+                                        tr("Enter command (CMD / PowerShell):"),
+                                        QLineEdit::Normal, QString(), &ok);
+    if (ok && !cmd.trimmed().isEmpty())
+    {
+        emit sig_executeCommand(cmd.trimmed(), "win_r");
+    }
 }
